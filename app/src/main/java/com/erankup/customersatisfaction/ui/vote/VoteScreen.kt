@@ -14,6 +14,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -47,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,7 +91,7 @@ import com.erankup.customersatisfaction.domain.model.VoteType
 import androidx.annotation.DrawableRes
 import kotlinx.coroutines.delay
 
-private const val ADMIN_PASSWORD = "LeadVision"
+private const val ADMIN_PASSWORD = "LeadMe"
 
 @Composable
 fun VoteRoute(
@@ -204,13 +214,14 @@ fun VoteRoute(
         onVoteSelected = viewModel::onVoteSelected,
         onSubmitSession = viewModel::submitSession,
         onRetryQuestions = viewModel::retryFetchQuestions,
-        onSaveDeviceConfig = { token, owner, baseUrl, headerTitle, headerLogoPath, headerBg, headerText, bodyBg, bodyText, accent ->
+        onSaveDeviceConfig = { token, owner, baseUrl, headerTitle, headerLogoPath, questionInstruction, headerBg, headerText, bodyBg, bodyText, accent ->
             viewModel.saveDeviceConfig(
                 token = token,
                 owner = owner,
                 baseUrl = baseUrl,
                 headerTitle = headerTitle,
                 headerLogoPath = headerLogoPath,
+                questionInstruction = questionInstruction,
                 headerBackgroundColor = headerBg,
                 headerTextColor = headerText,
                 bodyBackgroundColor = bodyBg,
@@ -278,21 +289,22 @@ fun VoteRoute(
             initialBaseUrl = uiState.baseUrl,
             initialHeaderTitle = uiState.headerTitle,
             initialHeaderLogoPath = uiState.headerLogoPath.orEmpty(),
+            initialQuestionInstruction = uiState.questionInstruction,
             initialHeaderBackgroundColor = uiState.headerBackgroundColor,
             initialHeaderTextColor = uiState.headerTextColor,
             initialBodyBackgroundColor = uiState.bodyBackgroundColor,
             initialBodyTextColor = uiState.bodyTextColor,
             initialAccentColor = uiState.accentColor,
-            onSave = { token, owner, baseUrl, headerTitle, headerLogoPath, headerBg, headerText, bodyBg, bodyText, accent ->
+            onSave = { token, owner, baseUrl, headerTitle, headerLogoPath, questionInstruction, headerBg, headerText, bodyBg, bodyText, accent ->
                 pendingExitAfterSave = false
-                viewModel.saveDeviceConfig(token, owner, baseUrl, headerTitle, headerLogoPath, headerBg, headerText, bodyBg, bodyText, accent)
+                viewModel.saveDeviceConfig(token, owner, baseUrl, headerTitle, headerLogoPath, questionInstruction, headerBg, headerText, bodyBg, bodyText, accent)
             },
-            onExit = { token, owner, baseUrl, headerTitle, headerLogoPath, headerBg, headerText, bodyBg, bodyText, accent ->
+            onExit = { token, owner, baseUrl, headerTitle, headerLogoPath, questionInstruction, headerBg, headerText, bodyBg, bodyText, accent ->
                 if (token.isBlank()) {
                     errorMessage = context.getString(R.string.token_required)
                 } else {
                     pendingExitAfterSave = true
-                    viewModel.saveDeviceConfig(token, owner, baseUrl, headerTitle, headerLogoPath, headerBg, headerText, bodyBg, bodyText, accent)
+                    viewModel.saveDeviceConfig(token, owner, baseUrl, headerTitle, headerLogoPath, questionInstruction, headerBg, headerText, bodyBg, bodyText, accent)
                 }
             },
             onDismiss = {
@@ -312,8 +324,6 @@ private fun VoteHeader(
     logoPath: String?,
     colors: VoteThemeColors
 ) {
-    val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
     val headerBrush = remember(colors) {
         Brush.linearGradient(
             colors = listOf(
@@ -335,62 +345,26 @@ private fun VoteHeader(
             modifier = Modifier
                 .background(headerBrush)
                 .padding(
-                    horizontal = if (isTablet) 40.dp else 28.dp,
-                    vertical = if (isTablet) 28.dp else 32.dp
+                    horizontal = 28.dp,
+                    vertical = 24.dp
                 )
         ) {
-            if (isTablet) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(32.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.weight(0.4f),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        LogoBadge(
-                            logoPath = logoPath,
-                            titleFallback = title,
-                            colors = colors,
-                            modifier = Modifier.size(144.dp)
-                        )
-                    }
-                    Column(
-                        modifier = Modifier.weight(0.6f),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = colors.headerText,
-                            textAlign = TextAlign.Start
-                        )
-                        Box(
-                            modifier = Modifier
-                                .height(4.dp)
-                                .width(96.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(colors.headerText.copy(alpha = 0.35f))
-                        )
-                    }
-                }
-            } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                LogoBadge(
+                    logoPath = logoPath,
+                    titleFallback = title,
+                    colors = colors,
+                    modifier = Modifier.size(112.dp)
+                )
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    LogoBadge(
-                        logoPath = logoPath,
-                        titleFallback = title,
-                        colors = colors,
-                        modifier = Modifier.size(112.dp)
-                    )
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineMedium.copy(
@@ -398,7 +372,7 @@ private fun VoteHeader(
                             letterSpacing = 0.5.sp
                         ),
                         color = colors.headerText,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Start
                     )
                     Box(
                         modifier = Modifier
@@ -501,6 +475,7 @@ private fun QuestionStep(
     question: Question?,
     questionNumber: Int,
     totalQuestions: Int,
+    instruction: String,
     onVoteSelected: (VoteType) -> Unit,
     colors: VoteThemeColors
 ) {
@@ -534,7 +509,7 @@ private fun QuestionStep(
             textAlign = TextAlign.Center
         )
         Text(
-            text = stringResource(id = R.string.question_instruction),
+            text = instruction,
             style = MaterialTheme.typography.bodyLarge,
             color = colors.bodyText,
             textAlign = TextAlign.Center
@@ -683,6 +658,7 @@ private fun VoteScreen(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -724,6 +700,7 @@ private fun VoteScreen(
                         initialBaseUrl = state.baseUrl,
                         initialHeaderTitle = state.headerTitle,
                         initialHeaderLogoPath = state.headerLogoPath.orEmpty(),
+                        initialQuestionInstruction = state.questionInstruction,
                         initialHeaderBackgroundColor = state.headerBackgroundColor,
                         initialHeaderTextColor = state.headerTextColor,
                         initialBodyBackgroundColor = state.bodyBackgroundColor,
@@ -762,6 +739,7 @@ private fun DeviceSetupScreen(
     initialBaseUrl: String,
     initialHeaderTitle: String,
     initialHeaderLogoPath: String,
+    initialQuestionInstruction: String,
     initialHeaderBackgroundColor: String,
     initialHeaderTextColor: String,
     initialBodyBackgroundColor: String,
@@ -773,6 +751,7 @@ private fun DeviceSetupScreen(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -787,6 +766,9 @@ private fun DeviceSetupScreen(
     var baseUrl by remember(initialBaseUrl) { mutableStateOf(initialBaseUrl) }
     var headerTitle by remember(initialHeaderTitle) { mutableStateOf(initialHeaderTitle) }
     var headerLogoPath by remember(initialHeaderLogoPath) { mutableStateOf(initialHeaderLogoPath) }
+    var questionInstruction by remember(initialQuestionInstruction) {
+        mutableStateOf(initialQuestionInstruction)
+    }
     var headerBackgroundColor by remember(initialHeaderBackgroundColor) {
         mutableStateOf(initialHeaderBackgroundColor)
     }
@@ -875,6 +857,15 @@ private fun DeviceSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(text = stringResource(id = R.string.header_title_label)) },
             singleLine = true
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = questionInstruction,
+            onValueChange = { questionInstruction = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(text = stringResource(id = R.string.question_instruction_label)) },
+            singleLine = false,
+            maxLines = 3
         )
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
@@ -967,6 +958,7 @@ private fun DeviceSetupScreen(
                 val trimmedBaseUrl = baseUrl.trim()
                 val trimmedOwner = owner.trim()
                 val trimmedHeaderTitle = headerTitle.trim().ifEmpty { null }
+                val trimmedQuestionInstruction = questionInstruction.trim().ifEmpty { null }
                 val trimmedLogoUrl = headerLogoPath.trim().ifEmpty { null }
                 var hasError = false
                 if (trimmedToken.isEmpty()) {
@@ -1009,6 +1001,7 @@ private fun DeviceSetupScreen(
                         trimmedBaseUrl,
                         trimmedHeaderTitle,
                         headerLogoPath.takeIf { it.isNotBlank() },
+                        trimmedQuestionInstruction,
                         normalizedHeaderBg!!,
                         normalizedHeaderText!!,
                         normalizedBodyBg!!,
@@ -1024,6 +1017,7 @@ private fun DeviceSetupScreen(
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun VoteContent(
     state: VoteUiState,
@@ -1040,6 +1034,19 @@ private fun VoteContent(
 ) {
     val colors = state.themeColors
     val verticalScrollState = rememberScrollState()
+    val canTriggerRefresh = state.deviceOwner.isNotBlank() &&
+        state.deviceToken.isNotBlank() &&
+        !state.isLoading
+    val manualRefreshEnabled = canTriggerRefresh && !state.questionsLoading
+    val refreshAction by rememberUpdatedState(newValue = {
+        if (manualRefreshEnabled) {
+            onRetryQuestions()
+        }
+    })
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = state.questionsLoading,
+        onRefresh = { refreshAction() }
+    )
     val headerGradient = remember(colors) {
         Brush.verticalGradient(
             colors = listOf(
@@ -1054,6 +1061,7 @@ private fun VoteContent(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.bodyBackground)
+            .pullRefresh(pullRefreshState, enabled = canTriggerRefresh)
     ) {
         Box(
             modifier = Modifier
@@ -1090,6 +1098,15 @@ private fun VoteContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    if (canTriggerRefresh) {
+                        Text(
+                            text = stringResource(id = R.string.pull_to_refresh_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.bodyText.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
             when {
                 state.questionsLoading -> QuestionsLoading()
 
@@ -1098,13 +1115,19 @@ private fun VoteContent(
                     onRetry = onRetryQuestions
                 )
 
-                !state.isFeedbackStage -> QuestionStep(
-                    question = state.questions.getOrNull(state.currentQuestionIndex),
-                    questionNumber = state.currentQuestionIndex + 1,
-                    totalQuestions = state.questions.size,
-                    onVoteSelected = onVoteSelected,
-                    colors = colors
-                )
+                !state.isFeedbackStage -> {
+                    val instructionText = state.questionInstruction.ifBlank {
+                        stringResource(id = R.string.question_instruction)
+                    }
+                    QuestionStep(
+                        question = state.questions.getOrNull(state.currentQuestionIndex),
+                        questionNumber = state.currentQuestionIndex + 1,
+                        totalQuestions = state.questions.size,
+                        instruction = instructionText,
+                        onVoteSelected = onVoteSelected,
+                        colors = colors
+                    )
+                }
 
                 else -> FeedbackStage(
                     state = state,
@@ -1119,6 +1142,28 @@ private fun VoteContent(
             }
                 }
             }
+        }
+
+        PullRefreshIndicator(
+            refreshing = state.questionsLoading,
+            state = pullRefreshState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp),
+            backgroundColor = colors.bodyBackground,
+            contentColor = colors.accent
+        )
+
+        if (canTriggerRefresh) {
+            RefreshQuestionsButton(
+                enabled = manualRefreshEnabled,
+                isRefreshing = state.questionsLoading,
+                onRefresh = { refreshAction() },
+                colors = colors,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(horizontal = 16.dp, vertical = 20.dp)
+            )
         }
 
         AnimatedVisibility(
@@ -1215,6 +1260,51 @@ private fun ThankYouScreen(
 }
 
 @Composable
+private fun RefreshQuestionsButton(
+    enabled: Boolean,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    colors: VoteThemeColors,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Surface(
+        modifier = modifier.size(48.dp),
+        shape = CircleShape,
+        color = colors.headerBackground.copy(alpha = 0.95f),
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .clickable(
+                    enabled = enabled && !isRefreshing,
+                    interactionSource = interactionSource,
+                    indication = rememberRipple(bounded = true),
+                    onClick = onRefresh
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colors.headerText
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = stringResource(id = R.string.refresh_questions),
+                    tint = if (enabled) colors.headerText else colors.headerText.copy(alpha = 0.4f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun EmojiVoteButton(
     voteType: VoteType,
     onVoteSelected: (VoteType) -> Unit,
@@ -1270,6 +1360,9 @@ private fun FeedbackForm(
     showConsentWarning: Boolean,
     colors: VoteThemeColors
 ) {
+    val consentEntityName = state.headerTitle.ifBlank {
+        state.deviceOwner.ifBlank { stringResource(id = R.string.header_default_title) }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1329,7 +1422,10 @@ private fun FeedbackForm(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = stringResource(id = R.string.marketing_consent_text),
+                text = stringResource(
+                    id = R.string.marketing_consent_text,
+                    consentEntityName
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.bodyText
             )
@@ -1395,6 +1491,7 @@ private fun AdminPanelDialog(
     initialBaseUrl: String,
     initialHeaderTitle: String,
     initialHeaderLogoPath: String,
+    initialQuestionInstruction: String,
     initialHeaderBackgroundColor: String,
     initialHeaderTextColor: String,
     initialBodyBackgroundColor: String,
@@ -1406,6 +1503,7 @@ private fun AdminPanelDialog(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -1418,6 +1516,7 @@ private fun AdminPanelDialog(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -1433,6 +1532,9 @@ private fun AdminPanelDialog(
     var baseUrl by remember(initialBaseUrl) { mutableStateOf(initialBaseUrl) }
     var headerTitle by remember(initialHeaderTitle) { mutableStateOf(initialHeaderTitle) }
     var headerLogoPath by remember(initialHeaderLogoPath) { mutableStateOf(initialHeaderLogoPath) }
+    var questionInstruction by remember(initialQuestionInstruction) {
+        mutableStateOf(initialQuestionInstruction)
+    }
     var headerBackgroundColor by remember(initialHeaderBackgroundColor) {
         mutableStateOf(initialHeaderBackgroundColor)
     }
@@ -1527,6 +1629,14 @@ private fun AdminPanelDialog(
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = questionInstruction,
+                    onValueChange = { questionInstruction = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(text = stringResource(id = R.string.question_instruction_label)) },
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.height(16.dp))
                 LogoPreviewSection(
                     logoPath = headerLogoPath,
                     onPickLogo = onPickLogo,
@@ -1608,6 +1718,7 @@ private fun AdminPanelDialog(
                 val trimmedBaseUrl = baseUrl.trim()
                 val trimmedOwner = owner.trim()
                 val trimmedHeaderTitle = headerTitle.trim().ifEmpty { null }
+                val trimmedQuestionInstruction = questionInstruction.trim().ifEmpty { null }
                 val trimmedLogoUrl = headerLogoPath.trim().ifEmpty { null }
                 var hasError = false
                 if (trimmedToken.isEmpty()) {
@@ -1650,6 +1761,7 @@ private fun AdminPanelDialog(
                         trimmedBaseUrl,
                         trimmedHeaderTitle,
                         trimmedLogoUrl,
+                        trimmedQuestionInstruction,
                         normalizedHeaderBg!!,
                         normalizedHeaderText!!,
                         normalizedBodyBg!!,
@@ -1671,7 +1783,8 @@ private fun AdminPanelDialog(
                     val trimmedBaseUrl = baseUrl.trim()
                     val trimmedOwner = owner.trim()
                     val trimmedHeaderTitle = headerTitle.trim().ifEmpty { null }
-                    val trimmedLogoUrl = headerLogoPath.trim().ifEmpty { null }
+                val trimmedQuestionInstruction = questionInstruction.trim().ifEmpty { null }
+                val trimmedLogoUrl = headerLogoPath.trim().ifEmpty { null }
                     var hasError = false
                     if (trimmedToken.isEmpty()) {
                         showTokenError = true
@@ -1712,7 +1825,8 @@ private fun AdminPanelDialog(
                             trimmedOwner,
                             trimmedBaseUrl,
                             trimmedHeaderTitle,
-                            trimmedLogoUrl,
+                        trimmedLogoUrl,
+                        trimmedQuestionInstruction,
                             normalizedHeaderBg!!,
                             normalizedHeaderText!!,
                             normalizedBodyBg!!,

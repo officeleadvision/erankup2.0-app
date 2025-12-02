@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.erankup.customersatisfaction.app-mergeDebugResources-66:/values-ldltr-v21/values-ldltr-v21.xml",
+            "outputFile": "com.erankup.customersatisfaction.app-mergeDebugResources-2:/values-ldltr-v21/values-ldltr-v21.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\SSG Work\\.gradle\\caches\\transforms-4\\2f08cd188a5f5894f62991065f0095d3\\transformed\\appcompat-1.6.1\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "source": "C:\\gradle-8.14.3\\caches\\transforms-4\\2f08cd188a5f5894f62991065f0095d3\\transformed\\appcompat-1.6.1\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

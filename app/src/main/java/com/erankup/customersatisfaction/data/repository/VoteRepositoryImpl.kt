@@ -33,7 +33,8 @@ class VoteRepositoryImpl @Inject constructor(
                         .map { deviceDto ->
                             QuestionDevice(
                                 label = deviceDto.label,
-                                location = deviceDto.location
+                                location = deviceDto.location,
+                                token = deviceDto.token
                             )
                         }
                     Question(

@@ -64,12 +64,15 @@ string marketing_consent_text
 string name_label
 string password_placeholder
 string phone_label
+string pull_to_refresh_hint
 string question_instruction
+string question_instruction_label
 string question_progress
 string question_prompt
 string questions_loading
 string questions_missing
 string questions_retry
+string refresh_questions
 string retry
 string save
 string save_changes

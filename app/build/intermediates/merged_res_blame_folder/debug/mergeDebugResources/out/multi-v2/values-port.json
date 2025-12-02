@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.erankup.customersatisfaction.app-mergeDebugResources-66:/values-port/values-port.xml",
+            "outputFile": "com.erankup.customersatisfaction.app-mergeDebugResources-2:/values-port/values-port.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\SSG Work\\.gradle\\caches\\transforms-4\\2f08cd188a5f5894f62991065f0095d3\\transformed\\appcompat-1.6.1\\res\\values-port\\values-port.xml",
+                    "source": "C:\\gradle-8.14.3\\caches\\transforms-4\\2f08cd188a5f5894f62991065f0095d3\\transformed\\appcompat-1.6.1\\res\\values-port\\values-port.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

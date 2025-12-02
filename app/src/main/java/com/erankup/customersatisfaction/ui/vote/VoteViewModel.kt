@@ -58,7 +58,7 @@ class VoteViewModel @Inject constructor(
     private fun scheduleInactivityTimeout() {
         inactivityJob?.cancel()
         inactivityJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(60_000L)
+            kotlinx.coroutines.delay(INACTIVITY_TIMEOUT_MS)
             resetSessionDueToInactivity()
         }
     }
@@ -82,11 +82,10 @@ class VoteViewModel @Inject constructor(
                 questionsError = null
             )
         }
-        state.deviceOwner.takeIf { owner -> owner.isNotBlank() }?.let { owner ->
-            val token = state.deviceToken
-            if (token.isNotBlank()) {
-                loadQuestions(owner = owner, token = token)
-            }
+        val owner = state.deviceOwner
+        val token = state.deviceToken
+        if (owner.isNotBlank() && token.isNotBlank()) {
+            loadQuestions(owner = owner, token = token)
         }
     }
 
@@ -100,6 +99,7 @@ class VoteViewModel @Inject constructor(
                     baseUrl = config.baseUrl,
                     headerTitle = config.headerTitle ?: config.owner.orEmpty(),
                     headerLogoPath = config.headerLogoPath,
+                    questionInstruction = config.questionInstruction.orEmpty(),
                     hasDeviceConfig = !config.token.isNullOrBlank(),
                     headerBackgroundColor = config.theme.headerBackgroundColor,
                     headerTextColor = config.theme.headerTextColor,
@@ -142,14 +142,18 @@ class VoteViewModel @Inject constructor(
             val result = withContext(ioDispatcher) { repository.fetchQuestions(owner) }
             result
                 .onSuccess { questions ->
+                    val filteredQuestions = filterQuestionsForDevice(
+                        questions = questions,
+                        deviceToken = token
+                    )
                     _uiState.update { state ->
                         state.copy(
-                            questions = questions,
+                            questions = filteredQuestions,
                             questionsLoading = false,
                             questionsError = null,
                             currentQuestionIndex = 0,
                             answers = emptyList(),
-                            isFeedbackStage = questions.isEmpty()
+                            isFeedbackStage = filteredQuestions.isEmpty()
                         )
                     }
                 }
@@ -289,6 +293,7 @@ class VoteViewModel @Inject constructor(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -316,6 +321,8 @@ class VoteViewModel @Inject constructor(
             }
             val normalizedOwner = owner.trim().ifBlank { null }
             val normalizedHeaderTitle = headerTitle?.trim().takeUnless { it.isNullOrEmpty() }
+            val normalizedQuestionInstruction =
+                questionInstruction?.trim().takeUnless { it.isNullOrEmpty() }
 
             withContext(ioDispatcher) {
                 deviceConfigManager.saveDeviceConfig(
@@ -324,6 +331,7 @@ class VoteViewModel @Inject constructor(
                     baseUrl = normalizedBaseUrl,
                     headerTitle = normalizedHeaderTitle,
                     headerLogoPath = headerLogoPath,
+                    questionInstruction = normalizedQuestionInstruction,
                     headerBackgroundColor = headerBackgroundColor,
                     headerTextColor = headerTextColor,
                     bodyBackgroundColor = bodyBackgroundColor,
@@ -338,6 +346,7 @@ class VoteViewModel @Inject constructor(
                     baseUrl = normalizedBaseUrl,
                     headerTitle = normalizedHeaderTitle ?: normalizedOwner.orEmpty(),
                     headerLogoPath = headerLogoPath?.takeIf { path -> path.isNotBlank() },
+                    questionInstruction = normalizedQuestionInstruction.orEmpty(),
                     headerBackgroundColor = headerBackgroundColor,
                     headerTextColor = headerTextColor,
                     bodyBackgroundColor = bodyBackgroundColor,
@@ -438,6 +447,28 @@ class VoteViewModel @Inject constructor(
         refreshDeviceConfig()
     }
 
+    private fun filterQuestionsForDevice(
+        questions: List<Question>,
+        deviceToken: String
+    ): List<Question> {
+        val normalizedDeviceToken = deviceToken.trim()
+        if (normalizedDeviceToken.isEmpty()) {
+            return questions
+        }
+        return questions.filter { question ->
+            val assignedIdentifiers = question.devices.mapNotNull { device ->
+                when {
+                    !device.token.isNullOrBlank() -> device.token
+                    !device.label.isNullOrBlank() -> device.label
+                    else -> null
+                }?.trim()?.takeIf { it.isNotEmpty() }
+            }
+            assignedIdentifiers.isNotEmpty() && assignedIdentifiers.any { identifier ->
+                identifier.equals(normalizedDeviceToken, ignoreCase = true)
+            }
+        }
+    }
+
     private fun copyLogoToInternal(context: Context, uri: Uri): String {
         val resolver = context.contentResolver
         val logoDir = File(context.filesDir, "logos").apply { if (!exists()) mkdirs() }
@@ -461,6 +492,7 @@ class VoteViewModel @Inject constructor(
     }
 
     companion object {
+        private const val INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000L
         private const val MESSAGE_TOKEN_REQUIRED = "Необходимо е да въведете токен на устройството."
         private const val MESSAGE_BASE_URL_INVALID = "API адресът е невалиден."
         private const val MESSAGE_MARKETING_CONSENT_REQUIRED =
@@ -477,6 +509,7 @@ data class VoteUiState(
     val baseUrl: String = "",
     val headerTitle: String = "",
     val headerLogoPath: String? = null,
+    val questionInstruction: String = "",
     val headerBackgroundColor: String = DeviceConfigManager.DEFAULT_HEADER_BACKGROUND_COLOR,
     val headerTextColor: String = DeviceConfigManager.DEFAULT_HEADER_TEXT_COLOR,
     val bodyBackgroundColor: String = DeviceConfigManager.DEFAULT_BODY_BACKGROUND_COLOR,

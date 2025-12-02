@@ -12,7 +12,13 @@ enum class VoteType(
     SUPERLIKE("superlike", "\uD83D\uDE04", "Много доволен");
 
     companion object {
-        val ordered = values().toList()
+        val ordered = listOf(
+            SUPERLIKE,
+            LIKE,
+            NEUTRAL,
+            DISLIKE,
+            SUPERDISLIKE
+        )
     }
 }
 

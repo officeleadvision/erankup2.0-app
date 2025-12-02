@@ -34,11 +34,12 @@
     <string name="phone_label">Телефон</string>
     <string name="email_label">Имейл</string>
     <string name="comment_label">Коментар</string>
-    <string name="marketing_consent_text">Съгласявам се моите лични данни да бъдат използвани от "Община Ветово" с маркетингови и рекламни цели за връзка с мен въз основа на коментар от гласуването ми.</string>
+    <string name="marketing_consent_text">Съгласявам се моите лични данни да бъдат използвани от "%1$s" с маркетингови и рекламни цели за връзка с мен въз основа на коментар от гласуването ми.</string>
     <string name="header_title_label">Име в заглавието</string>
     <string name="header_logo_url_label">URL адрес на лого</string>
     <string name="header_logo_url_placeholder">https://example.com/logo.png</string>
     <string name="header_default_title">Обратна връзка</string>
+    <string name="question_instruction_label">Инструкция за въпроса</string>
     <string name="header_background_color_label">Цвят на фона (заглавие)</string>
     <string name="header_text_color_label">Цвят на текста (заглавие)</string>
     <string name="body_background_color_label">Цвят на фона (страница)</string>
@@ -53,8 +54,10 @@
     <string name="questions_loading">Зареждаме въпросите…</string>
     <string name="questions_retry">Опитай отново</string>
     <string name="questions_missing">Няма активни въпроси за това устройство.</string>
+    <string name="refresh_questions">Обнови въпросите</string>
+    <string name="pull_to_refresh_hint"></string>
     <string name="question_progress">Въпрос %1$d от %2$d</string>
-    <string name="question_instruction">Моля, оценете обслужването, като докоснете емотикона, който най-добре отразява вашето усещане – от Много недоволен до Много доволен. Вашето мнение е важно за нас.</string>
+    <string name="question_instruction">Как бихте ни оценили? Мнението Ви е важно за нас!</string>
     <string name="answered_questions_title">Вашите отговори (%1$d от %2$d)</string>
     <string name="answer_question_label">%1$d. %2$s</string>
     <string name="feedback_submit">Изпрати обратната връзка</string>

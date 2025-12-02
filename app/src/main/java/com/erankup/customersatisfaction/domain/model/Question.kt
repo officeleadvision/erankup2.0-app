@@ -2,7 +2,8 @@ package com.erankup.customersatisfaction.domain.model
 
 data class QuestionDevice(
     val label: String?,
-    val location: String?
+    val location: String?,
+    val token: String?
 )
 
 data class Question(

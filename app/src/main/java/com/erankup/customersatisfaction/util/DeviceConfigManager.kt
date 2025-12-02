@@ -22,6 +22,7 @@ data class DeviceConfig(
     val baseUrl: String,
     val headerTitle: String?,
     val headerLogoPath: String?,
+    val questionInstruction: String?,
     val theme: DeviceThemeConfig
 )
 
@@ -42,6 +43,8 @@ class DeviceConfigManager @Inject constructor(
             ?: sharedPreferences.getString(KEY_HEADER_LOGO_URL_LEGACY, null)?.also {
                 sharedPreferences.edit().remove(KEY_HEADER_LOGO_URL_LEGACY).apply()
             }
+        val questionInstruction = sharedPreferences.getString(KEY_QUESTION_INSTRUCTION, null)
+            ?.takeIf { it.isNotBlank() }
         val headerBgColor = sharedPreferences.getString(KEY_HEADER_BACKGROUND_COLOR, null)
         val headerTextColor = sharedPreferences.getString(KEY_HEADER_TEXT_COLOR, null)
         val bodyBgColor = sharedPreferences.getString(KEY_BODY_BACKGROUND_COLOR, null)
@@ -56,6 +59,7 @@ class DeviceConfigManager @Inject constructor(
             baseUrl = normalizedBaseUrl,
             headerTitle = headerTitle?.takeIf { it.isNotBlank() },
             headerLogoPath = headerLogoPath?.takeIf { it.isNotBlank() },
+            questionInstruction = questionInstruction,
             theme = DeviceThemeConfig(
                 headerBackgroundColor = normalizeColorHex(headerBgColor)
                     ?: DEFAULT_HEADER_BACKGROUND_COLOR,
@@ -77,6 +81,7 @@ class DeviceConfigManager @Inject constructor(
         baseUrl: String,
         headerTitle: String?,
         headerLogoPath: String?,
+        questionInstruction: String?,
         headerBackgroundColor: String,
         headerTextColor: String,
         bodyBackgroundColor: String,
@@ -87,6 +92,8 @@ class DeviceConfigManager @Inject constructor(
             ?: throw IllegalArgumentException("Invalid base url supplied")
         val sanitizedHeaderTitle = headerTitle?.trim().takeUnless { it.isNullOrEmpty() }
         val sanitizedLogoPath = headerLogoPath?.trim().takeUnless { it.isNullOrEmpty() }
+        val sanitizedQuestionInstruction =
+            questionInstruction?.trim().takeUnless { it.isNullOrEmpty() }
         val normalizedHeaderBg = normalizeColorHex(headerBackgroundColor)
             ?: throw IllegalArgumentException("Invalid header background color supplied")
         val normalizedHeaderText = normalizeColorHex(headerTextColor)
@@ -103,6 +110,7 @@ class DeviceConfigManager @Inject constructor(
             .putString(KEY_BASE_URL, normalizedBaseUrl)
             .applySanitizedString(KEY_HEADER_TITLE, sanitizedHeaderTitle)
             .applySanitizedString(KEY_HEADER_LOGO_PATH, sanitizedLogoPath)
+            .applySanitizedString(KEY_QUESTION_INSTRUCTION, sanitizedQuestionInstruction)
             .putString(KEY_HEADER_BACKGROUND_COLOR, normalizedHeaderBg)
             .putString(KEY_HEADER_TEXT_COLOR, normalizedHeaderText)
             .putString(KEY_BODY_BACKGROUND_COLOR, normalizedBodyBg)
@@ -120,6 +128,7 @@ class DeviceConfigManager @Inject constructor(
             .remove(KEY_HEADER_TITLE)
             .remove(KEY_HEADER_LOGO_PATH)
             .remove(KEY_HEADER_LOGO_URL_LEGACY)
+            .remove(KEY_QUESTION_INSTRUCTION)
             .remove(KEY_HEADER_BACKGROUND_COLOR)
             .remove(KEY_HEADER_TEXT_COLOR)
             .remove(KEY_BODY_BACKGROUND_COLOR)
@@ -152,6 +161,7 @@ class DeviceConfigManager @Inject constructor(
         private const val KEY_HEADER_TITLE = "header_title"
         private const val KEY_HEADER_LOGO_PATH = "header_logo_path"
         private const val KEY_HEADER_LOGO_URL_LEGACY = "header_logo_url"
+        private const val KEY_QUESTION_INSTRUCTION = "question_instruction"
         private const val KEY_HEADER_BACKGROUND_COLOR = "header_background_color"
         private const val KEY_HEADER_TEXT_COLOR = "header_text_color"
         private const val KEY_BODY_BACKGROUND_COLOR = "body_background_color"

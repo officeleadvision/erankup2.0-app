@@ -4,7 +4,8 @@ import com.google.gson.annotations.SerializedName
 
 data class QuestionDeviceDto(
     @SerializedName("label") val label: String?,
-    @SerializedName("location") val location: String?
+    @SerializedName("location") val location: String?,
+    @SerializedName("token") val token: String?
 )
 
 data class QuestionDto(
